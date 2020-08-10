@@ -43,14 +43,19 @@ def home():
         f"/api/v1.0/<start>/<end>"
     )
 
-# Precipitation route - query, ravel, jsonify
+# Precipitation route - query, append to dictionary and list, and jsonify
 @app.route("/api/v1.0/precipitation")
 def precipitation():
     session = Session(engine)
     results = session.query(measurement.date, measurement.prcp).all()
     session.close()
-    date_prcp = list(np.ravel(results))
-    return jsonify(date_prcp)
+    precp = []
+    for date, prcp in results:
+        precp_dict = {}
+        precp_dict["Date"] = date
+        precp_dict["Precipitation"] = prcp
+        precp.append(precp_dict)
+    return jsonify(precp)
 
 # Stations route - query, ravel, jsonify
 @app.route("/api/v1.0/stations")
@@ -80,8 +85,7 @@ def tobs():
     active_station = session.query(measurement.station, func.count(measurement.station)).\
                             group_by(measurement.station).\
                             order_by(func.count(measurement.station).desc()).\
-                            filter(measurement.date <= (dt.date(int(yyyy), int(mm), int(dd)) - dt.timedelta(days=365))).\
-                            filter(measurement.date >= (dt.date(int(yyyy), int(mm), int(dd)) - dt.timedelta(days=730))).first()
+                            filter(measurement.date >= (dt.date(int(yyyy), int(mm), int(dd)) - dt.timedelta(days=365))).first()
 
     # Ravel for list of active station
     ly_station = list(np.ravel(active_station))
@@ -89,8 +93,7 @@ def tobs():
     # Query date and tobs according to previous year active station
     py_station = session.query(measurement.date, measurement.tobs).\
                 filter(measurement.station==ly_station[0]).\
-                filter(measurement.date <= (dt.date(int(yyyy), int(mm), int(dd)) - dt.timedelta(days=365))).\
-                filter(measurement.date >= (dt.date(int(yyyy), int(mm), int(dd)) - dt.timedelta(days=730))).all()
+                filter(measurement.date >= (dt.date(int(yyyy), int(mm), int(dd)) - dt.timedelta(days=365))).all()
 
     py_active_station = list(np.ravel(py_station))
     session.close()
